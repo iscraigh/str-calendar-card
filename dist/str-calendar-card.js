@@ -1,30 +1,35 @@
 // =====================================================================
-// 1. VISUAL UI CONFIGURATION EDITOR COMPONENT
+// 1. VISUAL UI CONFIGURATION EDITOR COMPONENT (Fixed Re-render)
 // =====================================================================
 class StrCalendarCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._initialized = false;
   }
 
   setConfig(config) {
     this._config = { ...config };
-    this.render();
+    // Only rebuild the DOM if it hasn't been built yet
+    if (!this._initialized && this._hass) {
+      this.render();
+    }
   }
 
   set hass(hass) {
     this._hass = hass;
-    this.render();
+    if (!this._initialized && this._config) {
+      this.render();
+    }
   }
 
   render() {
     if (!this._hass || !this._config) return;
+    this._initialized = true;
 
-    // Normalizes existing single-entity or multi-entity configs
     const currentEntities = this._config.entities || (this._config.entity ? [{ entity: this._config.entity, name: "", color: "#ff385c" }] : []);
     const titleVal = this._config.title || "";
 
-    // Grab available calendar entities from Home Assistant state machine
     const availableCalendars = Object.keys(this._hass.states)
       .filter((eid) => eid.startsWith("calendar."))
       .sort();
@@ -112,13 +117,48 @@ class StrCalendarCardEditor extends HTMLElement {
       <button class="btn" id="add-entity-btn">+ Add Calendar</button>
     `;
 
-    const listContainer = this.shadowRoot.getElementById("entities-list");
+    this.rebuildList(availableCalendars);
 
-    // Populate each entity line
+    // Title changes persist on change/blur
+    const titleInput = this.shadowRoot.getElementById("title-input");
+    titleInput.addEventListener("change", (e) => {
+      this._config = { ...this._config, title: e.target.value };
+      this.fireConfigChanged();
+    });
+
+    // Add calendar
+    this.shadowRoot.getElementById("add-entity-btn").addEventListener("click", () => {
+      const entities = this._getEntitiesArray();
+      const fallbackId = availableCalendars[0] || "calendar.crystal_hollows_rental_control";
+      const palette = ["#ff385c", "#008489", "#8e44ad", "#d35400", "#2980b9", "#27ae60"];
+      const newColor = palette[entities.length % palette.length];
+      
+      entities.push({ entity: fallbackId, name: "", color: newColor });
+      this._config = { ...this._config, entities: entities };
+      delete this._config.entity;
+      this.fireConfigChanged();
+      this.rebuildList(availableCalendars);
+    });
+  }
+
+  _getEntitiesArray() {
+    return this._config.entities 
+      ? JSON.parse(JSON.stringify(this._config.entities)) 
+      : (this._config.entity ? [{ entity: this._config.entity, name: "", color: "#ff385c" }] : []);
+  }
+
+  rebuildList(availableCalendars) {
+    const listContainer = this.shadowRoot.getElementById("entities-list");
+    if (!listContainer) return;
+    listContainer.innerHTML = "";
+
+    const currentEntities = this._getEntitiesArray();
+
     currentEntities.forEach((item, index) => {
       const row = document.createElement("div");
       row.className = "entity-row";
 
+      // Select Dropdown
       const select = document.createElement("select");
       availableCalendars.forEach((cId) => {
         const opt = document.createElement("option");
@@ -129,22 +169,26 @@ class StrCalendarCardEditor extends HTMLElement {
       });
       select.addEventListener("change", (e) => this.updateItem(index, "entity", e.target.value));
 
+      // Display Label Input
       const nameInput = document.createElement("input");
       nameInput.type = "text";
       nameInput.placeholder = "Display Label";
       nameInput.value = item.name || "";
-      nameInput.addEventListener("input", (e) => this.updateItem(index, "name", e.target.value));
+      // Use 'change' so typing isn't interrupted, but also commit on blur
+      nameInput.addEventListener("change", (e) => this.updateItem(index, "name", e.target.value));
 
+      // Color Picker
       const colorInput = document.createElement("input");
       colorInput.type = "color";
       colorInput.value = item.color || "#ff385c";
-      colorInput.addEventListener("input", (e) => this.updateItem(index, "color", e.target.value));
+      colorInput.addEventListener("change", (e) => this.updateItem(index, "color", e.target.value));
 
+      // Delete Button
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "btn-delete";
       deleteBtn.innerHTML = "×";
       deleteBtn.title = "Remove";
-      deleteBtn.addEventListener("click", () => this.deleteItem(index));
+      deleteBtn.addEventListener("click", () => this.deleteItem(index, availableCalendars));
 
       row.appendChild(select);
       row.appendChild(nameInput);
@@ -152,42 +196,24 @@ class StrCalendarCardEditor extends HTMLElement {
       row.appendChild(deleteBtn);
       listContainer.appendChild(row);
     });
-
-    // Title input listener
-    this.shadowRoot.getElementById("title-input").addEventListener("input", (e) => {
-      this._config = { ...this._config, title: e.target.value };
-      this.fireConfigChanged();
-    });
-
-    // Add calendar button listener
-    this.shadowRoot.getElementById("add-entity-btn").addEventListener("click", () => {
-      const fallbackId = availableCalendars[0] || "calendar.crystal_hollows_rental_control";
-      const palette = ["#ff385c", "#008489", "#8e44ad", "#d35400", "#2980b9", "#27ae60"];
-      const newColor = palette[currentEntities.length % palette.length];
-      
-      const updated = [...currentEntities, { entity: fallbackId, name: "", color: newColor }];
-      this._config = { ...this._config, entities: updated };
-      delete this._config.entity; // standardize on array
-      this.fireConfigChanged();
-      this.render();
-    });
   }
 
   updateItem(index, field, value) {
-    const list = [...(this._config.entities || [])];
+    const list = this._getEntitiesArray();
+    if (!list[index]) return;
     list[index][field] = value;
     this._config = { ...this._config, entities: list };
     delete this._config.entity;
     this.fireConfigChanged();
   }
 
-  deleteItem(index) {
-    const list = [...(this._config.entities || [])];
+  deleteItem(index, availableCalendars) {
+    const list = this._getEntitiesArray();
     list.splice(index, 1);
     this._config = { ...this._config, entities: list };
     delete this._config.entity;
     this.fireConfigChanged();
-    this.render();
+    this.rebuildList(availableCalendars);
   }
 
   fireConfigChanged() {
@@ -199,7 +225,6 @@ class StrCalendarCardEditor extends HTMLElement {
     this.dispatchEvent(event);
   }
 }
-
 customElements.define("str-calendar-card-editor", StrCalendarCardEditor);
 
 
