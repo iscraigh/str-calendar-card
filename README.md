@@ -14,7 +14,7 @@ It accurately visualizes:
 ## Preview
 
 <!-- Replace this image link with your own screenshot once uploaded to your repo -->
-![STR Multi-Calendar Card Preview](https://raw.githubusercontent.com/iscraigh/str-calendar-card/main/images/preview.png)
+![STR Multi-Calendar Card Preview](https://raw.githubusercontent.com/iscraigh/str-calendar-card/main/preview.png)
 
 ---
 
