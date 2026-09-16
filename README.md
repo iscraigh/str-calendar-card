@@ -27,7 +27,7 @@ It accurately visualizes:
 3. Click the **three dots (⋮)** in the top right corner and select **Custom repositories**.
 4. Enter the repository URL:
    ```text
-   [https://github.com/YOUR_GITHUB_USERNAME/str-calendar-card](https://github.com/YOUR_GITHUB_USERNAME/str-calendar-card)
+   [https://github.com/YOUR_GITHUB_USERNAME/str-calendar-card](https://github.com/iscraigh/str-calendar-card)
 5.   Select Lovelace (Dashboard) as the category and click Add.
 
 6.    Find STR Multi-Calendar Card in the store list and click Download.
