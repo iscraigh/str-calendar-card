@@ -1,0 +1,20 @@
+{
+  "name": "str-calendar-card",
+  "version": "1.0.0",
+  "description": "Airbnb & VRBO style turnover calendar card for Home Assistant",
+  "main": "dist/str-calendar-card.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_GITHUB_USERNAME/str-calendar-card.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "hacs",
+    "airbnb",
+    "str",
+    "rental-control"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
